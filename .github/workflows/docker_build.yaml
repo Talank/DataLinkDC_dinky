@@ -19,11 +19,6 @@ name: Docker Build
 
 on:
   workflow_dispatch:
-    inputs:
-      dinky_version:
-        description: 'dinky version'
-        required: true
-
 jobs:
   build_front:
     name: Build_Web
@@ -65,11 +60,15 @@ jobs:
 
   build_release:
     name: Build Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        flink: [ '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20' ]
+        flink: ['1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
     env:
       MAVEN_OPTS: -Xmx2G -Xms2G
     steps:
@@ -114,11 +113,11 @@ jobs:
   build_image:
     name: build image
     runs-on: ubuntu-latest
-    needs: [build_front,build_release]
+    needs: [build_front, build_release]
     strategy:
       fail-fast: true
       matrix:
-        flink: ["1.14","1.15","1.16","1.17","1.18","1.19","1.20"]
+        flink: ["1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20"]
     steps:
       # git checkout 代码
       - name: Checkout

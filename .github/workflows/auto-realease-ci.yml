@@ -17,24 +17,10 @@ name: "Release Dinky"
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        type: string
-        description: 'Dinky version'
-        required: true
-      prerelease:
-        type: boolean
-        description: 'Is this a pre-release?'
-        required: true
-      release_notes:
-        type: string
-        description: 'Release notes'
-        required: true
-
 jobs:
   release:
     name: ${{ inputs.prerelease == 'true' && 'Pre Release' || 'Release' }}
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ matrix.os }}"
 
     steps:
       - name: Set up JDK 8
@@ -143,3 +129,10 @@ jobs:
             ${{ inputs.release_notes }}
           files: |
             ./build/dinky-release-*.tar.gz
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+      fail-fast: false
