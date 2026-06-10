@@ -17,20 +17,6 @@ name: "Release Dinky"
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        type: string
-        description: 'Dinky version'
-        required: true
-      prerelease:
-        type: boolean
-        description: 'Is this a pre-release?'
-        required: true
-      release_notes:
-        type: string
-        description: 'Release notes'
-        required: true
-
 jobs:
   release:
     name: ${{ inputs.prerelease == 'true' && 'Pre Release' || 'Release' }}
@@ -143,3 +129,5 @@ jobs:
             ${{ inputs.release_notes }}
           files: |
             ./build/dinky-release-*.tar.gz
+    strategy:
+      fail-fast: false
