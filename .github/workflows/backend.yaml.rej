@@ -1,0 +1,23 @@
+@@ -113,7 +113,7 @@
+       - name: Build and Package
+         run: |
+           ./mvnw -B clean install \
+-                 -Dmaven.test.skip=true \
++                 -Dmaven.test.skip=true \
+                  -Dspotless.check.skip=true \
+                  -Denforcer.skip=false \
+                  -Dmaven.javadoc.skip=true \
+@@ -141,10 +141,10 @@
+   run_e2e:
+     name: Run E2E
+     needs: build_release
+-    if: matrix.os == 'ubuntu-latest'
+     strategy:
+       fail-fast: false
+       matrix:
+         flink: ['1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+-        os: *id001
++        os:
++          - ubuntu-latest
+     runs-on: ${{ matrix.os }}
+\ No newline at end of line
