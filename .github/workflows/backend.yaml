@@ -18,23 +18,14 @@
 name: Backend
 
 on:
-  push:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - dev
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - '**/*.sql'
-
 concurrency:
   group: backend-${{ github.event.pull_request.number || github.ref }}
 
 jobs:
   check:
     name: Check Code
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -42,6 +33,12 @@ jobs:
       - name: Check Style
         run: |
           ./mvnw -T 4C -B --no-snapshot-updates clean spotless:check -P flink-all
+    strategy:
+      matrix:
+        os: &id001
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+      fail-fast: false
   build_web:
     name: Build_Web
     runs-on: ubuntu-latest
@@ -89,13 +86,14 @@ jobs:
           path: ./dinky-web/dist
   build_release:
     name: Build Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: check
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        jdk: [ 8, 11 ]
-        flink: [ '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20' ]
+        jdk: [8, 11]
+        flink: ['1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+        os: *id001
 
     timeout-minutes: 30
     env:
@@ -140,7 +138,7 @@ jobs:
           ./check_package_size.sh
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: ${{ matrix.jdk  == 8 }}
+        if: always()
         with:
           name: dinky-realease-${{ matrix.flink }}
           path: ./build/dinky-release*.tar.gz
@@ -153,10 +151,11 @@ jobs:
     name: Run E2E
     needs: build_release
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        flink: [ '1.15', '1.16', '1.17', '1.18', '1.19', '1.20' ]
-    runs-on: ubuntu-latest
+        flink: ['1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+        os: *id001
+    runs-on: ${{ matrix.os }}
     services:
       registry:
         image: registry:2
@@ -320,11 +319,11 @@ jobs:
         run: |
           docker run  -v ./e2e_test/tools:/app -w /app -v ./kube:/kube -v ./e2e_test/docker-compose-env/dinky:/dinky/jar -v ./dinky-release/extends/flink${{ matrix.flink }}:/opt/flink/lib -v ./e2e_test/docker-compose-env/dinky/mysql-connector-java-8.0.30.jar:/opt/flink/lib/mysql-connector-java-8.0.30.jar   --net dinky_net --rm --entrypoint /bin/bash python:3.9 -c  'pip install  -r requirements.txt  &&  python main.py dinky:8888 ${{ matrix.flink }}'
       - name: Get k8s pods info and logs
-        if: ${{ always() }}
+        if: always()
         run: |
           chmod -R 755 ./e2e_test/view_k8s_all_pod_logs.sh
           ./e2e_test/view_k8s_all_pod_logs.sh dinky
       - name: Get Python HttpServer log
-        if: ${{ always() }}
+        if: always()
         run: |
           cat ./logs/python_http.log

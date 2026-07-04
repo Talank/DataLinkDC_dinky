@@ -16,20 +16,15 @@
 name: Format Code in fork repo
 
 on:
-  push:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - '**/*.sql'
-
+  workflow_dispatch:
 concurrency:
   group: backend-${{ github.event.pull_request.number || github.ref }}
 
 jobs:
   format:
-    if: github.repository != 'DataLinkDC/dinky' && vars.FORMAT == 'true'
+    if: always()
     name: Format Code
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -39,27 +34,27 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-         filters: |
-           frontend:
-             - 'dinky-web/**'
-           backend:
-             - '!dinky-web/**'
+          filters: |
+            frontend:
+              - 'dinky-web/**'
+            backend:
+              - '!dinky-web/**'
 
       - name: Run spotless apply
-        if:  steps.filter.outputs.backend == 'true'
-        run : ./mvnw -T 4C -B --no-snapshot-updates clean spotless:apply -P flink-all
+        if: always()
+        run: ./mvnw -T 4C -B --no-snapshot-updates clean spotless:apply -P flink-all
       - uses: actions/setup-node@v3
-        if: steps.filter.outputs.frontend == 'true'
+        if: always()
         with:
           node-version: 18
       - name: Get npm cache directory
         id: npm-cache-dir
-        if: steps.filter.outputs.frontend == 'true'
+        if: always()
         run: |
           echo "::set-output name=dir::$(npm config get cache)"
       - uses: actions/cache@v3
         id: npm-cache # use this to check for `cache-hit` ==> if: steps.npm-cache.outputs.cache-hit != 'true'
-        if: steps.filter.outputs.frontend == 'true'
+        if: always()
         with:
           path: |
             ${{ steps.npm-cache-dir.outputs.dir }}
@@ -68,10 +63,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: Install Dependencies
-        if: steps.filter.outputs.frontend == 'true'
+        if: always()
         run: cd dinky-web && npm install -g pnpm && pnpm install --only=dev --prefer-offline
       - name: Run frontend format
-        if:  steps.filter.outputs.frontend == 'true'
+        if: always()
         run: cd dinky-web && npm run lint:prettier
 
       - name: Check for modified files
@@ -79,6 +74,12 @@ jobs:
         run: |
           echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
       - uses: stefanzweifel/git-auto-commit-action@v4
-        if: steps.git-check.outputs.modified == 'true'
+        if: always()
         with:
           commit_message: Spotless Apply
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+      fail-fast: false
